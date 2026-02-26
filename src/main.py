@@ -22,7 +22,18 @@ class SayoryBot(discord.Client):
         self.ai = cohere.ClientV2(envar.AI_KEY)
         self.model = "command-a-03-2025"
         self.personality = "You're Sayori from doki doki lieterature club and someone says:"
-        self.answer_format = "You should answer often in a short message without \"\"!"
+        self.answer_format = "You should answer without quots!"
+        # Memory size in messages, 2 means 1 user message and 1 bot answer
+        self.MEMORY_SIZE = 16*2
+
+        # Prompt works like the settings and the memory for the bot
+        # also used to send the message to the bot
+        self.prompt: list[dict[str, str]] = [
+            {
+                "role": "system",
+                "content": self.personality + ", " + self.answer_format
+            }
+        ]
 
         print(f"Logged in as: '{self.user}'")
 
@@ -31,27 +42,33 @@ class SayoryBot(discord.Client):
 
         if message.author == self.user:
             return # The bot should not respond to its own messages
-
-        if self.user.mention in message.content:
+        elif self.user.mention in message.content:
             message_content = replace_id_with_displayname(message)
             print(f"Processed message: '{message_content}'")
 
+            self.prompt.append({
+                "role": "user",
+                "content": f"{message.author.display_name} says: \"{message_content}\""
+            })
+            print(self.prompt)
+            
             response = self.ai.chat(
                 model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self.personality + ", " + self.answer_format
-                    },
-                    {
-                        "role": "user",
-                        "content": message_content
-                    }
-                ]
+                messages=self.prompt
             )
 
+            self.prompt.append({
+                "role": "assistant",
+                "content": response.message.content[0].text
+            })
+            
+            # Remove from the left
+            if len(self.prompt) >= 1 + self.MEMORY_SIZE:
+                del self.prompt[1:2] # Don't remove first element it is bot setting
+            
             await message.channel.send(response.message.content[0].text)
-        elif "uwu" in message.content.lower():
+
+        elif is_silly(message.content):
             response = self.ai.chat(
                 model=self.model,
                 messages=[
@@ -73,9 +90,9 @@ def replace_id_with_displayname(message: discord.Message) -> str:
     user_ids = get_ids(content)
 
     for i in user_ids:
-        print(f"Id: {i}")
+        # print(f"Id: {i}")
         member = message.guild.get_member(int(i))
-        print(f"Member: {member}")
+        # print(f"Member: {member}")
         content = content.replace(f"<@{i}>", member.display_name)
     
     return content
@@ -83,6 +100,11 @@ def replace_id_with_displayname(message: discord.Message) -> str:
 def get_ids(message: str) -> list[str]:
     user_ids = re.findall(r"<@!?(\d+)>", message)
     return user_ids
+
+def is_silly(message: str) -> bool:
+    tokenized_message = message.lower().split()
+    silly_words = [ "uwu", "owo", "twt", "-w-", ":3", "^^", "^_^" ]
+    return any(word in tokenized_message for word in silly_words)
 
 if __name__ == "__main__":
     main()
