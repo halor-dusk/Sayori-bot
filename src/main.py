@@ -21,7 +21,7 @@ class SayoryBot(discord.Client):
     async def on_ready(self) -> None:
         self.ai = cohere.ClientV2(envar.AI_KEY)
         self.model = "command-a-03-2025"
-        self.personality = "You're Sayori from doki doki lieterature club and someone says:"
+        self.personality = "You're Sayori from doki doki lieterature club"
         self.answer_format = "You should answer without quots!"
         # Memory size in messages, 2 means 1 user message and 1 bot answer
         self.MEMORY_SIZE = 16*2
@@ -42,7 +42,7 @@ class SayoryBot(discord.Client):
 
         if message.author == self.user:
             return # The bot should not respond to its own messages
-        elif self.user.mention in message.content:
+        elif await self.check_reply(message):
             message_content = replace_id_with_displayname(message)
             print(f"Processed message: '{message_content}'")
 
@@ -50,7 +50,7 @@ class SayoryBot(discord.Client):
                 "role": "user",
                 "content": f"{message.author.display_name} says: \"{message_content}\""
             })
-            print(self.prompt)
+            print("Thinking...")
             
             response = self.ai.chat(
                 model=self.model,
@@ -84,15 +84,24 @@ class SayoryBot(discord.Client):
             )
 
             await message.channel.send(response.message.content[0].text)
+        
+    async def check_reply(self, message: discord.Message) -> bool:
+        if self.user.mention in message.content:
+            return True
+        
+        if message.reference:
+            referenced = await message.channel.fetch_message(message.reference.message_id)
+            
+            return referenced.author.id == self.user.id
+        
+        return False
 
 def replace_id_with_displayname(message: discord.Message) -> str:
     content = message.content
     user_ids = get_ids(content)
 
     for i in user_ids:
-        # print(f"Id: {i}")
         member = message.guild.get_member(int(i))
-        # print(f"Member: {member}")
         content = content.replace(f"<@{i}>", member.display_name)
     
     return content
