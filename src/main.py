@@ -1,6 +1,6 @@
 import discord
-import cohere
-
+from google import genai
+from google.genai import types
 import envar
 
 import re
@@ -19,73 +19,68 @@ Api key is: '{envar.AI_KEY}'
 
 class SayoryBot(discord.Client):
     async def on_ready(self) -> None:
-        self.ai = cohere.ClientV2(envar.AI_KEY)
-        self.model = "command-a-03-2025"
+        self.ai = genai.Client(api_key=envar.GEMINY_KEY)
+
+        self.model = "gemini-3-flash-preview"
         self.personality = "You're Sayori from doki doki lieterature club and someone says:"
-        self.answer_format = "You should answer without quots!"
-        # Memory size in messages, 2 means 1 user message and 1 bot answer
-        self.MEMORY_SIZE = 16*2
+        self.answer_format = "You should answer in a short message without quots!"
+        self.main_config = types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_level="medium"),
+            system_instruction=self.personality + ", " + self.answer_format,
+            temperature=1
+        )
+        self.main_chat =self.ai.chats.create(
+            model=self.model,
+            config=self.main_config
+        )
 
-        # Prompt works like the settings and the memory for the bot
-        # also used to send the message to the bot
-        self.prompt: list[dict[str, str]] = [
-            {
-                "role": "system",
-                "content": self.personality + ", " + self.answer_format
-            }
-        ]
-
-        print(f"Logged in as: '{self.user}'")
+        print(f"""
+Logged in as: '{self.user}'
+Ai model: {self.model}
+""")
 
     async def on_message(self, message: discord.Message) -> None:
         print(f"Raw message from {message.author.name}: '{message.content}'")
 
         if message.author == self.user:
             return # The bot should not respond to its own messages
-        elif self.user.mention in message.content:
-            message_content = replace_id_with_displayname(message)
-            print(f"Processed message: '{message_content}'")
 
-            self.prompt.append({
-                "role": "user",
-                "content": f"{message.author.display_name} says: \"{message_content}\""
-            })
-            print(self.prompt)
-            
-            response = self.ai.chat(
-                model=self.model,
-                messages=self.prompt
+        elif await self.check_reply(message):
+            print("Processing message...")
+            message_content = replace_ids_with_displayname(message)
+            print(
+                f"Processed message: '{message_content}'", 
+                "Thinking...",
+                sep="\n"
             )
 
-            self.prompt.append({
-                "role": "assistant",
-                "content": response.message.content[0].text
-            })
-            
-            # Remove from the left
-            if len(self.prompt) >= 1 + self.MEMORY_SIZE:
-                del self.prompt[1:2] # Don't remove first element it is bot setting
-            
-            await message.channel.send(response.message.content[0].text)
+            response = self.main_chat.send_message(message_content)
+
+            await message.channel.send(response.text)
 
         elif is_silly(message.content):
-            response = self.ai.chat(
+            response = self.ai.models.generate_content(
                 model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": self.personality + ", " + self.answer_format
-                    },
-                    {
-                        "role": "user",
-                        "content": "dont't talk or start a conversation just do something cute!"
-                    }
-                ]
+                contents="Dont't talk or start a conversation just do something cute!",
+                config=self.main_config
             )
 
-            await message.channel.send(response.message.content[0].text)
+            await message.reply(response.text)
+        
+    
+    async def check_reply(self, message: discord.Message) -> bool:
+        if self.user.mention in message.content:
+            return True
+        
+        if message.reference:
+            referenced = await message.channel.fetch_message(message.reference.message_id)
+            
+            return referenced.author.id == self.user.id
+        
+        return False
+        
 
-def replace_id_with_displayname(message: discord.Message) -> str:
+def replace_ids_with_displayname(message: discord.Message) -> str:
     content = message.content
     user_ids = get_ids(content)
 
