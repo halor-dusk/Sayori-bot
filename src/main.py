@@ -6,6 +6,8 @@ import cohere
 import re
 import base64
 
+from keep_alive import keep_alive
+
 def main() -> None:
     print(f"""
 Bot token is: '{envar.BOT_TOKEN}'
@@ -56,13 +58,13 @@ Keep responses sweet, energetic, and concise."
         print(f"Logged in as: '{self.user}'")
 
     async def on_message(self, message: discord.Message) -> None:
-        print(f"Raw message from {message.author.name}: '{message.content}'")
+        # print(f"Raw message from {message.author.name}: '{message.content}'")
 
         if message.author == self.user:
             return # The bot should not respond to its own messages
         elif await self.check_reply(message):
             message_content = replace_id_with_displayname(message)
-            print(f"Processed message: '{message_content}'", "Thinking...", sep="\n")
+            # print(f"Processed message: '{message_content}'", "Thinking...", sep="\n")
             
             response = await self.generate_response(message_content, message.author.display_name, message.attachments)
             await message.channel.send(response)
@@ -118,7 +120,7 @@ Keep responses sweet, energetic, and concise."
             "role": "user",
             "content": content
         })
-        print(self.history)
+        # print(self.history)
 
         response = self.ai.chat(
             model=self.model,
@@ -148,7 +150,7 @@ Keep responses sweet, energetic, and concise."
 
         for attachment in attachments:
             if attachment.content_type and attachment.content_type.startswith("image"):
-                print("Found image!")
+                # print("Found image!")
                 byte_image: bytes = await attachment.read()
                 base64_image = to_base64(byte_image)
                 prompt.append({
@@ -188,4 +190,5 @@ def is_silly(message: str) -> bool:
 
 
 if __name__ == "__main__":
+    keep_alive()
     main()

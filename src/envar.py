@@ -6,3 +6,4 @@ load_dotenv(dotenv_path)
 
 BOT_TOKEN: str = getenv("BOT_TOKEN")
 AI_KEY: str = getenv("AI_KEY")
+PORT: int = int(getenv("PORT"))
