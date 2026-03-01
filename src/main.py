@@ -41,10 +41,10 @@ Never include Sayori: or quotes around your own response.
 
 Keep responses sweet, energetic, and concise."
 """
-        self.temperature = 1
-        self.max_tokens = 50
+        self.temperature: float = 1
+        self.max_tokens: int = 50
         # Memory size in messages, 2 means 1 user message and 1 bot answer
-        self.MEMORY_SIZE = 16*2
+        self.MEMORY_SIZE: int = 16*2
 
         # Prompt works like the settings and the memory for the bot
         # also used to send the message to the bot

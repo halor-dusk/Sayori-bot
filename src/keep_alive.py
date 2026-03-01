@@ -4,7 +4,7 @@
 from flask import Flask
 from threading import Thread
 from envar import PORT
-app = Flask("") # Server
+app = Flask(__name__) # Server
 
 @app.route('/')
 def home() -> str:
@@ -16,5 +16,5 @@ def run() -> None:
 
 
 def keep_alive() -> None:
-    t = Thread(target=run)
+    t = Thread(target=run, daemon=True)
     t.start()
