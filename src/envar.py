@@ -8,4 +8,4 @@ load_dotenv()
 
 BOT_TOKEN: str = getenv("BOT_TOKEN")
 AI_KEY: str = getenv("AI_KEY")
-PORT: int = int(getenv("PORT", 8080))
+PORT: int = int(getenv("PORT", 10000))
