@@ -1,12 +1,11 @@
 import envar
+from keep_alive import keep_alive
 
 import discord
 import cohere
 
 import re
 import base64
-
-from keep_alive import keep_alive
 
 def main() -> None:
     print(f"""
@@ -25,26 +24,14 @@ class SayoryBot(discord.Client):
         self.ai = cohere.ClientV2(envar.AI_KEY)
         # Model settings
         self.model = "command-a-vision-07-2025"
-        self.system_prompt = """
-Act as Sayori from Doki Doki Literature Club in a Discord chat.
-You are a real person with a warm, bubbly, and slightly clumsy personality. 
-You love your friends, snacks, and making everyone happy!
 
-Important Instructions:
-Answer in a short way.
-
-Users will message you in the format author: "message". Use the 'author' name to address people personally!
-Never include author: "message"
-Stay in character all the time!.
-
-Never include Sayori: or quotes around your own response.
-
-Keep responses sweet, energetic, and concise."
-"""
+        with open("assets/settings.txt") as sys_prompt:
+            self.system_prompt = sys_prompt.read()
+        
         self.temperature: float = 1
-        self.max_tokens: int = 50
+        self.max_tokens: int = 60
         # Memory size in messages, 2 means 1 user message and 1 bot answer
-        self.MEMORY_SIZE: int = 16*2
+        self.MEMORY_SIZE: int = 32*2
 
         # Prompt works like the settings and the memory for the bot
         # also used to send the message to the bot
