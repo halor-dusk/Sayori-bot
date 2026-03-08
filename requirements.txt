@@ -1,4 +1,5 @@
-discord
 python-dotenv
-cohere
 flask
+discord
+PyNaCl
+cohere
